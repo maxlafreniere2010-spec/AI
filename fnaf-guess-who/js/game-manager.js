@@ -92,7 +92,7 @@ class GameManager {
         const history = appState.getState('history.stack');
         const redoStack = appState.getState('history.redoStack');
 
-        if (history.length === 0) return false;
+        if (history.length === 0) return { success: false };
 
         const current = history.pop();
         const flipped = appState.getState('game.flippedCards');
@@ -105,7 +105,7 @@ class GameManager {
         appState.setState('game.flippedCards', current.state);
         this.onGameUpdate?.({ type: 'undo', affected: current.affected });
 
-        return true;
+        return { success: true, affected: current.affected };
     }
 
     /**
@@ -115,7 +115,7 @@ class GameManager {
         const history = appState.getState('history.stack');
         const redoStack = appState.getState('history.redoStack');
 
-        if (redoStack.length === 0) return false;
+        if (redoStack.length === 0) return { success: false };
 
         const current = redoStack.pop();
         const flipped = appState.getState('game.flippedCards');
@@ -128,7 +128,7 @@ class GameManager {
         appState.setState('game.flippedCards', current.state);
         this.onGameUpdate?.({ type: 'redo', affected: current.affected });
 
-        return true;
+        return { success: true, affected: current.affected };
     }
 
     /**

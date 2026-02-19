@@ -538,12 +538,12 @@ class FNAFGuessWhoApp {
      */
     undo() {
         const result = this.gameManager.undo();
-        if (result) {
+        if (result.success) {
             this.renderMatchBoard(appState.getState('game.matchMode'));
             this.saveSession();
             
-            // Scroll to affected cards
-            this.scrollToAffectedCards();
+            // Scroll to and highlight affected cards
+            this.scrollToAndHighlightAffectedCards(result.affected);
         }
     }
 
@@ -552,12 +552,12 @@ class FNAFGuessWhoApp {
      */
     redo() {
         const result = this.gameManager.redo();
-        if (result) {
+        if (result.success) {
             this.renderMatchBoard(appState.getState('game.matchMode'));
             this.saveSession();
             
-            // Scroll to affected cards
-            this.scrollToAffectedCards();
+            // Scroll to and highlight affected cards
+            this.scrollToAndHighlightAffectedCards(result.affected);
         }
     }
     
@@ -565,18 +565,33 @@ class FNAFGuessWhoApp {
      * Scroll to the first affected card
      * @private
      */
-    scrollToAffectedCards() {
-        // Try to scroll to first card that was just toggled
-        const mode = appState.getState('game.matchMode');
-        const flipped = appState.getState('game.flippedCards');
-        
-        if (flipped && flipped.size > 0) {
-            const firstFlipped = Array.from(flipped)[0];
-            const card = document.querySelector(`.card[data-name="${firstFlipped}"]`);
-            if (card) {
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+    scrollToAndHighlightAffectedCards(affected) {
+        if (!affected || affected.length === 0) return;
+
+        // Scroll to first affected card
+        const firstAffected = affected[0];
+        const card = document.querySelector(`.card[data-name="${firstAffected}"]`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+
+        // Highlight all affected cards with pulse
+        affected.forEach(name => {
+            const cardEl = document.querySelector(`.card[data-name="${name}"]`);
+            if (cardEl) {
+                cardEl.classList.add('highlight-pulse');
+            }
+        });
+
+        // Remove highlight after animation
+        setTimeout(() => {
+            affected.forEach(name => {
+                const cardEl = document.querySelector(`.card[data-name="${name}"]`);
+                if (cardEl) {
+                    cardEl.classList.remove('highlight-pulse');
+                }
+            });
+        }, 1500); // Match animation duration
     }
 
     /**
