@@ -842,7 +842,7 @@ body::before {
 .card {
     width: 180px;
     height: 260px;
-    perspective: 1000px;
+    perspective: 5000px;
 }
 
 .card-inner {
@@ -860,7 +860,7 @@ body::before {
 }
 
 .card.flipped {
-    z-index: 10;
+    z-index: 100;
 }
 
 .card.highlight-pulse {
