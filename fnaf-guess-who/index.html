@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FNAF Guess Who - Refactored Edition</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body onmouseup="stopDragSelect && stopDragSelect()">
+
+<!-- Audio Elements -->
+<audio id="bg-audio" loop>
+    <source src="background-music.mp3" type="audio/mpeg">
+</audio>
+<audio id="sfx-btn">
+    <source src="button.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Connection Status -->
+<div id="conn-status">PEER: DISCONNECTED</div>
+
+<!-- Control Panels -->
+<div id="top-left-ctrl">
+    <button id="main-menu-btn" class="tiny-btn" onclick="goHome()">MAIN MENU</button>
+    <button id="logout-btn" class="tiny-btn" onclick="logout()">LOGOUT</button>
+</div>
+
+<div id="bottom-left-ctrl">
+    <button class="tiny-btn" onclick="factoryReset()">FACTORY RESET</button>
+</div>
+
+<!-- Sync & Pause Overlays -->
+<div id="sync-overlay">
+    <div class="menu-box">
+        <h2 style="color: var(--fnaf-green);">SYNCING DATA...</h2>
+        <p>WAITING FOR THE OTHER PLAYER TO CHOOSE THEIR ANIMATRONIC.</p>
+    </div>
+</div>
+
+<div id="pause-overlay">
+    <div class="menu-box">
+        <h2 style="color: #ff0;">CONNECTION LOST</h2>
+        <p id="pause-msg">WAITING FOR OPPONENT TO RECONNECT...</p>
+    </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="screen active">
+    <div class="menu-box login-box">
+        <div class="terminal-header">
+            <h1 style="color: var(--fnaf-red); text-shadow: 0 0 10px #f00; margin: 0 0 10px 0;">◆ FNAF GUESS WHO ◆</h1>
+            <div class="terminal-status" style="color: #666; font-size: 9px;">[ SYSTEM READY ]</div>
+        </div>
+        <div class="login-section">
+            <label style="color: var(--fnaf-green); font-size: 11px; display: block; margin-bottom: 10px; text-transform: uppercase;">ENTER OPERATOR DESIGNATION</label>
+            <input type="text" id="username-input" class="login-input" placeholder="USERNAME" maxlength="50">
+            <div class="input-hint" style="color: #666; font-size: 9px; margin-top: 5px;">alphanumeric • spaces • dashes</div>
+        </div>
+        <div class="login-buttons">
+            <button class="menu-btn btn-login" id="login-btn" onclick="confirmLogin()">[ ENTER TERMINAL ]</button>
+            <button class="menu-btn btn-secondary" onclick="randomizeUsername()" style="font-size: 11px; padding: 8px;">[ RANDOM ]</button>
+        </div>
+        <div id="login-error" class="login-error" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- MAIN MENU SCREEN -->
+<div id="screen-main" class="screen">
+    <div class="menu-box main-menu-box">
+        <h2 id="welcome-msg" style="color: var(--fnaf-green); text-shadow: 0 0 10px #0f0; margin-bottom: 20px;">⚙ WELCOME ⚙</h2>
+        <div id="reconnect-prompt" style="display:none; margin-bottom: 20px; padding: 15px; border: 2px solid var(--fnaf-green); border-radius: 8px; background: rgba(0, 15, 0, 0.3);">
+            <p id="resume-text" style="font-size: 12px; color: #fff; margin: 0 0 10px 0;">» UNFINISHED MATCH DETECTED</p>
+            <button class="menu-btn" style="background: #040; border-color: #0f0; color: #9f9;" onclick="resumeSession()">[ RECONNECT ]</button>
+            <button class="menu-btn" style="font-size: 10px; height: 30px; padding: 0; margin-top: 5px;" onclick="clearSession()">[ DISCARD ]</button>
+        </div>
+        <div class="menu-grid">
+            <button class="menu-btn btn-join" onclick="showScreen('screen-join')" title="Connect to a friend's room">
+                <span class="btn-icon">⟪</span> JOIN ROOM
+            </button>
+            <button class="menu-btn btn-host" onclick="hostRoom()" title="Create a new room">
+                <span class="btn-icon">⟫</span> HOST ROOM
+            </button>
+            <button class="menu-btn btn-editor" onclick="openBoardManager()" title="Create and edit custom boards">
+                <span class="btn-icon">⚙</span> BOARD EDITOR
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- JOIN SCREEN -->
+<div id="screen-join" class="screen">
+    <div class="menu-box">
+        <h2 style="color: var(--fnaf-red); text-shadow: 0 0 10px #f00;">◈ JOIN ROOM ◈</h2>
+        <p style="font-size: 10px; color: #666; margin-bottom: 15px;">» ENTER YOUR FRIEND'S EXACT USERNAME</p>
+        <input type="text" id="join-room-id" class="login-input" placeholder="FRIEND'S USERNAME" maxlength="50">
+        <div id="join-error" class="login-error" style="display:none; margin-top: 10px;"></div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button class="menu-btn" style="flex: 1;" onclick="connectToPeer()">[ CONNECT ]</button>
+            <button class="menu-btn" style="flex: 1;" onclick="showScreen('screen-main')">[ BACK ]</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOBBY SCREEN -->
+<div id="screen-lobby" class="screen">
+    <div class="menu-box">
+        <h2 id="lobby-title" style="color: var(--fnaf-red);">LOBBY</h2>
+        <div id="player-roster" class="data-list"></div>
+        <div id="host-controls" style="display:none;">
+            <select id="lobby-board-select" style="width:100%; background:#222; color:white; padding:10px; margin-bottom:20px;"></select>
+            <button class="menu-btn" id="start-btn" onclick="startMatch()">START MATCH</button>
+        </div>
+        <div id="guest-waiting" style="display:none; color: #666; font-size: 12px; margin-bottom: 20px;">WAITING FOR HOST TO START...</div>
+        <button class="menu-btn" onclick="disconnect()">DISCONNECT</button>
+    </div>
+</div>
+
+<!-- BOARDS SCREEN -->
+<div id="screen-boards" class="screen">
+    <div class="menu-box">
+        <h2 style="color: var(--fnaf-red);">YOUR BOARDS</h2>
+        <div id="board-list" class="data-list"></div>
+        <input type="text" id="new-board-name" style="background:#000; border:1px solid #444; color:var(--fnaf-green); padding:10px;" placeholder="NEW NAME">
+        <button class="menu-btn" onclick="createNewBoard()">CREATE NEW</button>
+        <button class="menu-btn" onclick="showScreen('screen-main')">BACK</button>
+    </div>
+</div>
+
+<!-- EDITOR SCREEN -->
+<div id="screen-editor" class="screen">
+    <div id="editor-wrapper" onmouseleave="stopDragSelect && stopDragSelect()">
+        <h2 id="editing-title" style="color: var(--fnaf-red); text-align:center;">BOARD EDITOR</h2>
+        <div class="search-container">
+            <input type="text" id="editor-search" class="search-input" placeholder="SEARCH ANIMATRONIC...">
+            <select id="section-jump" class="jump-select" onchange="jumpToSection(this.value, 'editor-grid')">
+                <option value="">JUMP TO...</option>
+                <option value="fnaf1">FNAF 1</option>
+                <option value="fnaf2">FNAF 2</option>
+                <option value="fnaf3">FNAF 3</option>
+                <option value="fnaf4">FNAF 4</option>
+                <option value="sl">SISTER LOCATION</option>
+                <option value="ffps">PIZZERIA SIM</option>
+                <option value="sb">SECURITY BREACH</option>
+                <option value="hw">HELP WANTED 1/2</option>
+                <option value="other">UCN / OTHER</option>
+            </select>
+        </div>
+        <div id="editor-grid"></div>
+    </div>
+    <div style="position:fixed; bottom:20px; width:100%; display:flex; justify-content:center; gap:10px;">
+        <button class="menu-btn" style="width:140px; font-size:10px;" onclick="window.bulkToggle && window.bulkToggle(true)">SELECT ALL</button>
+        <button class="menu-btn" style="width:140px; font-size:10px;" onclick="window.bulkToggle && window.bulkToggle(false)">DESELECT ALL</button>
+        <button class="menu-btn" style="width:200px;" onclick="saveEditor()">SAVE BOARD</button>
+    </div>
+</div>
+
+<!-- GAME OVER SCREEN -->
+<div id="screen-game-over" class="screen">
+    <div class="menu-box" style="width: 800px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.7);">
+        <div id="end-result-banner" class="result-text" style="text-shadow: 0 0 20px currentColor;">---</div>
+        <div class="end-grid">
+            <div class="end-side">
+                <div style="color: #888; font-size: 10px; margin-bottom: 10px;">LAST GUESS BY <span id="end-guesser-name">---</span></div>
+                <img id="end-guess-img" class="end-img" src="">
+                <div id="end-guess-name" style="font-weight: bold;">---</div>
+            </div>
+            <div class="end-side">
+                <div style="color: #888; font-size: 10px; margin-bottom: 10px;">ACTUAL TARGETS</div>
+                <div style="display: flex; justify-content: space-around;">
+                    <div>
+                        <div id="end-p1-label" style="font-size: 10px; color: var(--fnaf-green);">YOU</div>
+                        <img id="end-p1-img" style="width: 80px; height: 80px; object-fit: contain;">
+                        <div id="end-p1-name" style="font-size: 10px;">---</div>
+                    </div>
+                    <div>
+                        <div id="end-p2-label" style="font-size: 10px; color: var(--fnaf-red);">OPPONENT</div>
+                        <img id="end-p2-img" style="width: 80px; height: 80px; object-fit: contain;">
+                        <div id="end-p2-name" style="font-size: 10px;">---</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="menu-btn" style="margin-top: 30px;" onclick="showScreen('screen-lobby')">BACK TO ROOM</button>
+    </div>
+</div>
+
+<!-- GAME UI -->
+<div id="game-ui">
+    <div id="target-panel">
+        <div id="user-tag" style="color:var(--fnaf-green); font-size:12px; margin-bottom:10px;">---</div>
+        <div id="game-status" style="margin-bottom:10px; font-size:10px; color:#ff0; text-transform:uppercase;">SELECT YOUR ANIMATRONIC</div>
+        <div id="target-display" style="width:240px; height:240px; background:#000; border:1px solid #444; display:flex; align-items:center; justify-content:center; border-radius:8px; padding:10px; font-size: 12px; flex-direction: column;">CHOOSING...</div>
+
+        <div class="history-ctrl">
+            <button id="undo-btn" class="tiny-btn" onclick="window.undo && window.undo()" disabled>UNDO</button>
+            <button id="redo-btn" class="tiny-btn" onclick="window.redo && window.redo()" disabled>REDO</button>
+        </div>
+
+        <div id="audio-ctrl" style="margin-top: 15px; padding: 10px; border-top: 1px solid #333;">
+            <div style="font-size: 10px; color: #666; margin-bottom: 5px;">SYSTEM VOLUME</div>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.2" style="width: 100%; accent-color: var(--fnaf-red); cursor: pointer;">
+        </div>
+
+        <div class="search-container" style="margin-top:10px; flex-direction:column; background:transparent;">
+            <input type="text" id="match-search" class="search-input" style="width:240px;" placeholder="SEARCH...">
+            <select id="match-jump" class="jump-select" style="width:240px; margin-top:5px;" onchange="jumpToSection(this.value, 'game-board')">
+                <option value="">JUMP TO...</option>
+            </select>
+        </div>
+        <button id="invert-btn" class="menu-btn" style="width:240px; font-size:11px; margin-top:10px; display:none;" onclick="invertFlippedCards()">INVERT FLIPPED</button>
+    </div>
+    <div id="board-wrapper"><div id="game-board"></div></div>
+</div>
+
+<!-- Application Script -->
+<script type="module" src="js/app.js"></script>
+
+<!-- Global Initialization Waiter -->
+<script>
+    // Wait for app to initialize, then setup UI handlers
+    function setupUIHandlers() {
+        if (!window.app) {
+            // Retry after 100ms
+            setTimeout(setupUIHandlers, 100);
+            return;
+        }
+        
+        // Now that app exists, setup the login screen
+        const usernameInput = document.getElementById('username-input');
+        if (usernameInput) {
+            usernameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    window.confirmLogin();
+                }
+            });
+        }
+    }
+    
+    // Start waiting for app
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupUIHandlers);
+    } else {
+        setupUIHandlers();
+    }
+</script>
+
+</body>
+</html>
