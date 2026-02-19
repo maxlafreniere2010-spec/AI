@@ -859,6 +859,10 @@ body::before {
     transform: rotateY(180deg);
 }
 
+.card.flipped {
+    z-index: 10;
+}
+
 .card.highlight-pulse {
     animation: pulse-glow 1.5s infinite;
 }

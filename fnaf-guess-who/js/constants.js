@@ -137,7 +137,8 @@ export const PEER_CONFIG = {
             { url: 'stun:stun1.l.google.com:19302' },
             { url: 'stun:stun2.l.google.com:19302' },
             { url: 'stun:stun3.l.google.com:19302' },
-            { url: 'stun:stun4.l.google.com:19302' }
+            { url: 'stun:stun4.l.google.com:19302' },
+            { url: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' }
         ]
     },
     debug: 1
