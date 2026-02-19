@@ -852,7 +852,6 @@ body::before {
     transition: transform 0.4s;
     transform-style: preserve-3d;
     cursor: pointer;
-    will-change: transform;
 }
 
 .card.flipped .card-inner {
